@@ -1,0 +1,23 @@
+# Foundry
+cache/
+out/
+lib/
+broadcast/
+
+# SDK
+sdk/node_modules/
+sdk/dist/
+
+# App
+app/node_modules/
+app/.next/
+app/.env.local
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
