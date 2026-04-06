@@ -3,9 +3,25 @@
   "version": "0.1.0",
   "description": "SDK for Yumi EVM Fixed-Term Vault contracts",
   "main": "dist/index.js",
+  "module": "dist/esm/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Yumi-Finance/YumiEVMVaults.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "restricted"
+  },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && tsc -p tsconfig.esm.json",
     "clean": "rm -rf dist"
   },
   "dependencies": {
