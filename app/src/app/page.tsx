@@ -50,9 +50,16 @@ function PoolCard({
   const deadlineTs = depositDeadlineTs(pool.maturityTs, pool.depositDeadlineOffset);
   const dtm = daysToMaturity(pool.maturityTs);
 
-  /* User expected return = yToken balance (yTokens are minted 1:1 with payout at deposit time) */
+  /* User expected return — mirrors Solana SDK userExpectedReturn():
+     before withdrawals: yToken balance (already priced with interest at mint)
+     after withdrawals:  yTokenBalance * totalRepaid / totalExpectedReturn
+     (ratio is stable regardless of how many users have already withdrawn) */
   const expectedReturn: bigint | null =
-    userYieldBalance !== null && userYieldBalance > 0n ? userYieldBalance : null;
+    userYieldBalance !== null && userYieldBalance > 0n
+      ? pool.withdrawalsEnabled && pool.totalExpectedReturn > 0n
+        ? (userYieldBalance * pool.totalRepaid) / pool.totalExpectedReturn
+        : userYieldBalance
+      : null;
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 hover:border-zinc-700 transition">
