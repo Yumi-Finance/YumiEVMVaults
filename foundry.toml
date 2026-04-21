@@ -16,6 +16,7 @@ fluent_devnet  = "https://rpc.devnet.fluent.xyz/"
 fluent_mainnet = "https://rpc.fluent.xyz"
 
 [etherscan]
-fluent_testnet = { key = "no-api-key", url = "https://testnet.fluentscan.xyz/" }
-fluent_devnet  = { key = "no-api-key", url = "https://devnet.fluentscan.xyz/" }
-fluent_mainnet = { key = "no-api-key", url = "https://fluentscan.xyz" }
+# Blockscout-compatible API: base URL must end with /api/ (see Blockscout Foundry docs)
+fluent_testnet = { key = "no-api-key", url = "https://testnet.fluentscan.xyz/api/", chain = "20994" }
+fluent_devnet  = { key = "no-api-key", url = "https://devnet.fluentscan.xyz/api/", chain = "20993" }
+fluent_mainnet = { key = "no-api-key", url = "https://fluentscan.xyz/api/", chain = "25363" }
