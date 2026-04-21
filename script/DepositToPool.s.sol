@@ -8,13 +8,13 @@ import {FixedVault} from "../src/FixedVault.sol";
 /// @notice Deposits into a pool: approves `amount` then calls `deposit`. Key is the token holder (not necessarily authority).
 ///
 /// Environment variables:
-/// - PRIVATE_KEY — depositor private key
+/// - USER_PRIVATE_KEY — depositor private key
 /// - VAULT — FixedVault address
 /// - POOL_ID — pool id
 /// - AMOUNT — amount in token smallest units (must fit uint64)
 contract DepositToPool is Script {
     function run() external {
-        uint256 userKey = vm.envUint("PRIVATE_KEY");
+        uint256 userKey = vm.envUint("USER_PRIVATE_KEY");
         address user = vm.addr(userKey);
 
         address vaultAddr = vm.envAddress("VAULT");
