@@ -13,7 +13,9 @@ remappings = [
 [rpc_endpoints]
 fluent_testnet = "https://rpc.testnet.fluent.xyz/"
 fluent_devnet  = "https://rpc.devnet.fluent.xyz/"
+fluent_mainnet = "https://rpc.fluent.xyz"
 
 [etherscan]
 fluent_testnet = { key = "no-api-key", url = "https://testnet.fluentscan.xyz/" }
 fluent_devnet  = { key = "no-api-key", url = "https://devnet.fluentscan.xyz/" }
+fluent_mainnet = { key = "no-api-key", url = "https://fluentscan.xyz" }
