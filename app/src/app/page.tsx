@@ -18,7 +18,7 @@ import {
   isDepositOpen,
 } from "@/lib/client";
 import { getUserYieldBalance } from "@/lib/client";
-import { VAULT_ADDRESS, fluentTestnet } from "@/lib/constants";
+import { VAULT_ADDRESS, fluentMainnet } from "@/lib/constants";
 
 /* ---------- Pool Card ---------- */
 
@@ -240,7 +240,7 @@ export default function Home() {
       setYieldBalances({});
       return;
     }
-    const provider = new ethers.JsonRpcProvider(fluentTestnet.rpcUrls.default.http[0]);
+    const provider = new ethers.JsonRpcProvider(fluentMainnet.rpcUrls.default.http[0]);
     let cancelled = false;
 
     (async () => {

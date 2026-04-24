@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Yumi Vaults",
-  description: "Fixed-yield EVM vaults on Fluent",
+  description: "Fixed-yield EVM vaults on Fluent Mainnet",
 };
 
 export default function RootLayout({

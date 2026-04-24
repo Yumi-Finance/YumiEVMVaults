@@ -3,7 +3,6 @@
 import React, {
   createContext,
   useContext,
-  useMemo,
   useState,
   useCallback,
   useEffect,
@@ -21,7 +20,7 @@ import { useAccount, useWalletClient } from "wagmi";
 
 import { VaultClient } from "@/lib/client";
 import { getEthersSigner } from "@/lib/client";
-import { NETWORKS, DEFAULT_NETWORK, NetworkName, VAULT_ADDRESS, fluentTestnet } from "@/lib/constants";
+import { NETWORKS, DEFAULT_NETWORK, NetworkName, VAULT_ADDRESS, fluentMainnet } from "@/lib/constants";
 
 /* ---------- Network context ---------- */
 
@@ -79,9 +78,9 @@ function VaultClientProvider({ children }: { children: ReactNode }) {
 const wagmiConfig = getDefaultConfig({
   appName: "Yumi Vaults",
   projectId: "00000000000000000000000000000000", // WalletConnect placeholder
-  chains: [fluentTestnet],
+  chains: [fluentMainnet],
   transports: {
-    [fluentTestnet.id]: http("https://rpc.devnet.fluent.xyz/"),
+    [fluentMainnet.id]: http(fluentMainnet.rpcUrls.default.http[0]),
   },
 });
 

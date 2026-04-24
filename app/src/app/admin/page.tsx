@@ -18,7 +18,7 @@ import {
   isDepositOpen,
   SWEEP_GRACE_SECONDS,
 } from "@/lib/client";
-import { VAULT_ADDRESS, FUSD_ADDRESS, fluentTestnet } from "@/lib/constants";
+import { VAULT_ADDRESS, FUSD_ADDRESS } from "@/lib/constants";
 
 /* ---------- Section wrapper ---------- */
 
