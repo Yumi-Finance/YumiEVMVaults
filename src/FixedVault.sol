@@ -78,7 +78,41 @@ contract FixedVault is ReentrancyGuard {
 
     // ──────────────────────────── Events ─────────────────────────────────
 
-    event PoolInitialized(uint64 indexed poolId, address depositToken, address yieldToken);
+    event PoolInitialized(
+        uint64 indexed poolId,
+        address depositToken,
+        address yieldToken,
+        uint16 aprBps,
+        int64 maturityTs,
+        uint64 depositDeadlineOffset,
+        uint64 minDepositAmount,
+        uint64 maxTotalDeposit,
+        bool whitelistEnabled
+    );
+
+    event PoolUpdated(
+        uint64 indexed poolId,
+        address indexed authority_,
+        uint64 maxTotalDeposit,
+        uint64 minDepositAmount,
+        uint16 aprBps,
+        bool allowOverpay,
+        uint256 ts
+    );
+
+    event DepositPermitGranted(
+        uint64 indexed poolId, address indexed user, uint64 maxAmount, int64 expiresAt
+    );
+
+    event DepositPermitRevoked(uint64 indexed poolId, address indexed user);
+
+    event SweepRepayVaultEvent(
+        uint64 indexed poolId,
+        address indexed authority_,
+        uint64 amount,
+        uint64 totalSwept,
+        uint256 ts
+    );
 
     event DepositEvent(
         uint64 indexed poolId,
@@ -234,7 +268,17 @@ contract FixedVault is ReentrancyGuard {
         pool.maxTotalDeposit = params.maxTotalDeposit;
         pool.whitelistEnabled = params.whitelistEnabled;
 
-        emit PoolInitialized(poolId, params.depositToken, address(yt));
+        emit PoolInitialized(
+            poolId,
+            params.depositToken,
+            address(yt),
+            params.aprBps,
+            params.maturityTs,
+            params.depositDeadlineOffset,
+            params.minDepositAmount,
+            params.maxTotalDeposit,
+            params.whitelistEnabled
+        );
     }
 
     // ──────────────────────────── Deposit ────────────────────────────────
@@ -433,6 +477,16 @@ contract FixedVault is ReentrancyGuard {
         int64 now_ = int64(int256(block.timestamp));
         uint64 durationSecs = pool.maturityTs > now_ ? uint64(int64(pool.maturityTs) - now_) : 0;
         _calcExpectedReturn(pool.maxTotalDeposit, pool.aprBps, durationSecs);
+
+        emit PoolUpdated(
+            poolId,
+            msg.sender,
+            pool.maxTotalDeposit,
+            pool.minDepositAmount,
+            pool.aprBps,
+            pool.allowOverpay,
+            block.timestamp
+        );
     }
 
     // ──────────────────────────── Permits ────────────────────────────────
@@ -450,6 +504,8 @@ contract FixedVault is ReentrancyGuard {
         permit.amountUsed = 0;
         permit.expiresAt = expiresAt;
         permit.exists = true;
+
+        emit DepositPermitGranted(poolId, user, maxAmount, expiresAt);
     }
 
     function revokePermit(uint64 poolId, address user)
@@ -458,6 +514,7 @@ contract FixedVault is ReentrancyGuard {
         poolMustExist(poolId)
     {
         delete permits[poolId][user];
+        emit DepositPermitRevoked(poolId, user);
     }
 
     // ────────────────────── Sweep Repay Vault ────────────────────────────
@@ -482,6 +539,8 @@ contract FixedVault is ReentrancyGuard {
         pool.remainingRepay = 0;
 
         IERC20(pool.depositToken).safeTransfer(msg.sender, amount);
+
+        emit SweepRepayVaultEvent(poolId, msg.sender, amount, pool.totalSwept, block.timestamp);
     }
 
     // ──────────────────── Internal helpers ────────────────────────────────

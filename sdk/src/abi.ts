@@ -260,6 +260,26 @@ export const FIXED_VAULT_ABI = [
   },
   {
     "type": "event",
+    "name": "DepositPermitGranted",
+    "inputs": [
+      { "name": "poolId", "type": "uint64", "indexed": true, "internalType": "uint64" },
+      { "name": "user", "type": "address", "indexed": true, "internalType": "address" },
+      { "name": "maxAmount", "type": "uint64", "indexed": false, "internalType": "uint64" },
+      { "name": "expiresAt", "type": "int64", "indexed": false, "internalType": "int64" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "DepositPermitRevoked",
+    "inputs": [
+      { "name": "poolId", "type": "uint64", "indexed": true, "internalType": "uint64" },
+      { "name": "user", "type": "address", "indexed": true, "internalType": "address" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "EnableWithdrawalsEvent",
     "inputs": [
       { "name": "poolId", "type": "uint64", "indexed": true, "internalType": "uint64" },
@@ -276,7 +296,27 @@ export const FIXED_VAULT_ABI = [
     "inputs": [
       { "name": "poolId", "type": "uint64", "indexed": true, "internalType": "uint64" },
       { "name": "depositToken", "type": "address", "indexed": false, "internalType": "address" },
-      { "name": "yieldToken", "type": "address", "indexed": false, "internalType": "address" }
+      { "name": "yieldToken", "type": "address", "indexed": false, "internalType": "address" },
+      { "name": "aprBps", "type": "uint16", "indexed": false, "internalType": "uint16" },
+      { "name": "maturityTs", "type": "int64", "indexed": false, "internalType": "int64" },
+      { "name": "depositDeadlineOffset", "type": "uint64", "indexed": false, "internalType": "uint64" },
+      { "name": "minDepositAmount", "type": "uint64", "indexed": false, "internalType": "uint64" },
+      { "name": "maxTotalDeposit", "type": "uint64", "indexed": false, "internalType": "uint64" },
+      { "name": "whitelistEnabled", "type": "bool", "indexed": false, "internalType": "bool" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "PoolUpdated",
+    "inputs": [
+      { "name": "poolId", "type": "uint64", "indexed": true, "internalType": "uint64" },
+      { "name": "authority_", "type": "address", "indexed": true, "internalType": "address" },
+      { "name": "maxTotalDeposit", "type": "uint64", "indexed": false, "internalType": "uint64" },
+      { "name": "minDepositAmount", "type": "uint64", "indexed": false, "internalType": "uint64" },
+      { "name": "aprBps", "type": "uint16", "indexed": false, "internalType": "uint16" },
+      { "name": "allowOverpay", "type": "bool", "indexed": false, "internalType": "bool" },
+      { "name": "ts", "type": "uint256", "indexed": false, "internalType": "uint256" }
     ],
     "anonymous": false
   },
@@ -289,6 +329,18 @@ export const FIXED_VAULT_ABI = [
       { "name": "amount", "type": "uint64", "indexed": false, "internalType": "uint64" },
       { "name": "totalRepaid", "type": "uint64", "indexed": false, "internalType": "uint64" },
       { "name": "remainingRepay", "type": "uint64", "indexed": false, "internalType": "uint64" },
+      { "name": "ts", "type": "uint256", "indexed": false, "internalType": "uint256" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SweepRepayVaultEvent",
+    "inputs": [
+      { "name": "poolId", "type": "uint64", "indexed": true, "internalType": "uint64" },
+      { "name": "authority_", "type": "address", "indexed": true, "internalType": "address" },
+      { "name": "amount", "type": "uint64", "indexed": false, "internalType": "uint64" },
+      { "name": "totalSwept", "type": "uint64", "indexed": false, "internalType": "uint64" },
       { "name": "ts", "type": "uint256", "indexed": false, "internalType": "uint256" }
     ],
     "anonymous": false
