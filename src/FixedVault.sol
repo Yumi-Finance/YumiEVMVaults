@@ -311,7 +311,6 @@ contract FixedVault is ReentrancyGuard {
             if (permit.expiresAt > 0 && now_ > permit.expiresAt) revert PermitExpired();
             if (permit.maxAmount > 0) {
                 uint64 newUsed = permit.amountUsed + amount;
-                if (newUsed < permit.amountUsed) revert MathOverflow(); // overflow
                 if (newUsed > permit.maxAmount) revert PermitLimitExceeded();
                 permit.amountUsed = newUsed;
             }
@@ -322,13 +321,10 @@ contract FixedVault is ReentrancyGuard {
 
         // Update pool totals
         uint64 newTotalDeposited = pool.totalDeposited + amount;
-        if (newTotalDeposited < pool.totalDeposited) revert MathOverflow();
         if (newTotalDeposited > pool.maxTotalDeposit) revert PoolCapExceeded();
         pool.totalDeposited = newTotalDeposited;
 
-        uint64 newTotalExpected = pool.totalExpectedReturn + mintAmount;
-        if (newTotalExpected < pool.totalExpectedReturn) revert MathOverflow();
-        pool.totalExpectedReturn = newTotalExpected;
+        pool.totalExpectedReturn += mintAmount;
 
         // Transfer deposit token from user to this contract
         IERC20(pool.depositToken).safeTransferFrom(msg.sender, address(this), amount);
@@ -374,7 +370,6 @@ contract FixedVault is ReentrancyGuard {
 
         if (!pool.allowOverpay) {
             uint64 newTotalRepaid = pool.totalRepaid + amount;
-            if (newTotalRepaid < pool.totalRepaid) revert MathOverflow();
             if (newTotalRepaid > pool.totalExpectedReturn) revert RepayExceedsCap();
         }
 
