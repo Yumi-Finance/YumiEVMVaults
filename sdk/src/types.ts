@@ -40,6 +40,8 @@ export interface PoolData {
   withdrawalsEnabled: boolean;
   whitelistEnabled: boolean;
   allowOverpay: boolean;
+  /** True after a successful `initPool` for this id. */
+  initialized: boolean;
 }
 
 /** On-chain deposit permit data. */

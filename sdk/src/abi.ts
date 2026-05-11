@@ -143,7 +143,8 @@ export const FIXED_VAULT_ABI = [
       { "name": "totalSwept", "type": "uint64", "internalType": "uint64" },
       { "name": "withdrawalsEnabled", "type": "bool", "internalType": "bool" },
       { "name": "whitelistEnabled", "type": "bool", "internalType": "bool" },
-      { "name": "allowOverpay", "type": "bool", "internalType": "bool" }
+      { "name": "allowOverpay", "type": "bool", "internalType": "bool" },
+      { "name": "initialized", "type": "bool", "internalType": "bool" }
     ],
     "stateMutability": "view"
   },
@@ -366,6 +367,7 @@ export const FIXED_VAULT_ABI = [
   { "type": "error", "name": "DepositDeadlinePassed", "inputs": [] },
   { "type": "error", "name": "DepositTooSmall", "inputs": [] },
   { "type": "error", "name": "InvalidDeadlineOffset", "inputs": [] },
+  { "type": "error", "name": "InvalidDepositToken", "inputs": [] },
   { "type": "error", "name": "InvalidMaturity", "inputs": [] },
   { "type": "error", "name": "MathOverflow", "inputs": [] },
   { "type": "error", "name": "MaturityNotReached", "inputs": [] },
