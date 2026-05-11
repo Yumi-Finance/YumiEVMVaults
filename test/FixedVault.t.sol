@@ -89,7 +89,7 @@ contract FixedVaultTest is Test {
     }
 
     function _getYieldToken(uint64 poolId) internal view returns (YieldToken) {
-        (,,address yt,,,,,,,,,,,,,,) = vault.pools(poolId);
+        (,,address yt,,,,,,,,,,,,,,,) = vault.pools(poolId);
         return YieldToken(yt);
     }
 
@@ -104,7 +104,7 @@ contract FixedVaultTest is Test {
     ) {
         (,,,,,,, /*maxTotal*/,
          uint64 td, uint64 ter, uint64 tr, uint64 rr, uint64 taw, /*swept*/,
-         bool we, /*wl*/, bool ao) = vault.pools(poolId);
+         bool we, /*wl*/, bool ao, bool _initialized) = vault.pools(poolId);
         return (td, ter, tr, rr, taw, we, ao);
     }
 
@@ -116,11 +116,26 @@ contract FixedVaultTest is Test {
         uint64 pid = _initDefaultPool();
 
         assertTrue(vault.nextPoolId() > pid);
-        (uint64 storedId, address dt, address yt, uint16 apr, int64 mat, uint64 ddo, uint64 minDep, uint64 maxDep,
-         uint64 td, uint64 ter, uint64 tr, uint64 rr, uint64 taw, uint64 tsw,
-         bool we, bool wl, bool ao) = vault.pools(pid);
+
+        (
+            uint64 storedId,
+            address dt,
+            address yt,
+            uint16 apr,
+            int64 mat,
+            uint64 ddo,
+            uint64 minDep,
+            uint64 maxDep,,,,,,,,,,bool initialized
+        ) = vault.pools(pid);
 
         assertEq(storedId, pid);
+        assertTrue(initialized);
+
+        (,,,,,,,, uint64 td, uint64 ter, uint64 tr, uint64 rr, uint64 taw, uint64 tsw,,,,bool _unusedInit) =
+            vault.pools(pid);
+
+        (,,,,,,,,,,,,,,bool we, bool wl, bool ao, bool _unusedInit2) = vault.pools(pid);
+
         assertEq(dt, address(usdc));
         assertTrue(yt != address(0));
         assertEq(apr, APR_BPS);
@@ -173,6 +188,45 @@ contract FixedVaultTest is Test {
         );
     }
 
+    function test_initPool_rejectsZeroDepositToken() public {
+        vm.prank(authority);
+        vm.expectRevert(FixedVault.InvalidDepositToken.selector);
+        vault.initPool(
+            FixedVault.InitPoolParams({
+                depositToken: address(0),
+                aprBps: APR_BPS,
+                maturityTs: maturityTs,
+                depositDeadlineOffset: 0,
+                minDepositAmount: MIN_DEPOSIT,
+                maxTotalDeposit: MAX_TOTAL_DEPOSIT,
+                whitelistEnabled: false
+            })
+        );
+    }
+
+    function test_initPool_zeroDepositToken_doesNotConsumePoolId() public {
+        uint64 nextBefore = vault.nextPoolId();
+
+        vm.prank(authority);
+        vm.expectRevert(FixedVault.InvalidDepositToken.selector);
+        vault.initPool(
+            FixedVault.InitPoolParams({
+                depositToken: address(0),
+                aprBps: APR_BPS,
+                maturityTs: maturityTs,
+                depositDeadlineOffset: 0,
+                minDepositAmount: MIN_DEPOSIT,
+                maxTotalDeposit: MAX_TOTAL_DEPOSIT,
+                whitelistEnabled: false
+            })
+        );
+
+        assertEq(vault.nextPoolId(), nextBefore);
+
+        uint64 pid = _initDefaultPool();
+        assertEq(pid, nextBefore);
+    }
+
     function test_initPool_rejectsAprTooHigh() public {
         vm.prank(authority);
         vm.expectRevert(FixedVault.AprTooHigh.selector);
@@ -191,7 +245,7 @@ contract FixedVaultTest is Test {
 
     function test_initPool_acceptsAprAtCap() public {
         uint64 pid = _initPool(4000, maturityTs, 0, MIN_DEPOSIT, MAX_TOTAL_DEPOSIT, false);
-        (,,,uint16 apr,,,,,,,,,,,,,) = vault.pools(pid);
+        (,,,uint16 apr,,,,,,,,,,,,,,) = vault.pools(pid);
         assertEq(apr, 4000);
     }
 
@@ -248,7 +302,7 @@ contract FixedVaultTest is Test {
 
     function test_initPool_acceptsValidDeadlineOffset() public {
         uint64 pid = _initPool(APR_BPS, maturityTs, 86400, MIN_DEPOSIT, MAX_TOTAL_DEPOSIT, false);
-        (,,,, /*mat*/, uint64 ddo,,,,,,,,,,, ) = vault.pools(pid);
+        (,,,, /*mat*/, uint64 ddo,,,,,,,,,,,, ) = vault.pools(pid);
         assertEq(ddo, 86400);
     }
 
@@ -310,7 +364,7 @@ contract FixedVaultTest is Test {
 
         _deposit(user1, pid, tinyMax);
 
-        (,,,,,,,, uint64 td,,,,,,,,) = vault.pools(pid);
+        (,,,,,,,, uint64 td,,,,,,,,,) = vault.pools(pid);
         assertEq(td, tinyMax);
 
         // One more should fail
@@ -370,14 +424,14 @@ contract FixedVaultTest is Test {
         usdc.approve(address(vault), repay1 + repay2);
         vault.repay(POOL_ID, repay1);
 
-        (,,,,,,,,, /*ter*/, uint64 tr1, uint64 rr1,,,,, ) = vault.pools(POOL_ID);
+        (,,,,,,,,, /*ter*/, uint64 tr1, uint64 rr1,,,,,, ) = vault.pools(POOL_ID);
         assertEq(tr1, repay1);
         assertEq(rr1, repay1);
 
         vault.repay(POOL_ID, repay2);
         vm.stopPrank();
 
-        (,,,,,,,,, /*ter*/, uint64 tr2, uint64 rr2,,,,, ) = vault.pools(POOL_ID);
+        (,,,,,,,,, /*ter*/, uint64 tr2, uint64 rr2,,,,,, ) = vault.pools(POOL_ID);
         assertEq(tr2, repay1 + repay2);
         assertEq(rr2, repay1 + repay2);
     }
@@ -675,7 +729,7 @@ contract FixedVaultTest is Test {
             })
         );
 
-        (,,, uint16 apr,,,, uint64 maxDep,,,,,,,,, ) = vault.pools(POOL_ID);
+        (,,, uint16 apr,,,, uint64 maxDep,,,,,,,,,, ) = vault.pools(POOL_ID);
         assertEq(maxDep, newMax);
         assertEq(apr, 1200);
     }
@@ -973,8 +1027,8 @@ contract FixedVaultTest is Test {
         _deposit(user1, pid0, DEPOSIT_AMOUNT);
         _deposit(user1, pid1, DEPOSIT_AMOUNT);
 
-        (,,,,,,,, uint64 td0,,,,,,,,) = vault.pools(pid0);
-        (,,,,,,,, uint64 td1,,,,,,,,) = vault.pools(pid1);
+        (,,,,,,,, uint64 td0,,,,,,,,,) = vault.pools(pid0);
+        (,,,,,,,, uint64 td1,,,,,,,,,) = vault.pools(pid1);
 
         assertEq(td0, DEPOSIT_AMOUNT);
         assertEq(td1, DEPOSIT_AMOUNT);
