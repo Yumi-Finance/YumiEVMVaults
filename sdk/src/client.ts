@@ -8,6 +8,16 @@ import {
 } from "./types";
 
 const MULTICALL3_ADDRESS = "0xcA11bde05977b3631167028862bE2a173976CA11";
+
+/**
+ * keccak256(runtime bytecode) for canonical mds1/multicall `Multicall3` at
+ * {@link MULTICALL3_ADDRESS}. Same value observed on Fluent, Ethereum L1, Arbitrum, Base, etc.
+ * If `getCode` at that address is empty or hashes differently, `fetchAllPools` falls back
+ * to direct `pools(i)` reads on the vault.
+ */
+const CANONICAL_MULTICALL3_RUNTIME_CODEHASH =
+  "0xd5c15df687b16f2ff992fc8d767b4216323184a2bbc6ee2f9c398c318e770891";
+
 const MULTICALL3_ABI = [
   {
     type: "function",
@@ -30,6 +40,19 @@ const MULTICALL3_ABI = [
     stateMutability: "view",
   },
 ] as const;
+
+const isTrustedMulticall3AtAddress = async (
+  provider: ethers.Provider | null | undefined
+): Promise<boolean> => {
+  if (!provider) return false;
+  try {
+    const code = await provider.getCode(MULTICALL3_ADDRESS);
+    if (code === "0x" || code.length <= 2) return false;
+    return ethers.keccak256(code) === CANONICAL_MULTICALL3_RUNTIME_CODEHASH;
+  } catch {
+    return false;
+  }
+};
 
 export class VaultClient {
   readonly contract: Contract;
@@ -99,10 +122,22 @@ export class VaultClient {
     return Array.from({ length: Number(count) }, (_, i) => BigInt(i));
   }
 
-  /** Fetch all pools in a single Multicall3 aggregate call. */
+  /**
+   * Fetch all pools, batching via Multicall3 when bytecode at the vanity address matches the
+   * canonical Multicall3 runtime; otherwise one `pools(i)` RPC per pool on the vault.
+   */
   async fetchAllPools(): Promise<PoolData[]> {
     const count = Number(await this.contract.nextPoolId());
     if (count === 0) return [];
+
+    const provider =
+      (this.contract.runner as Signer | null)?.provider ??
+      (this.contract.runner as ethers.Provider | null);
+
+    if (!(await isTrustedMulticall3AtAddress(provider))) {
+      const ids = Array.from({ length: count }, (_, i) => BigInt(i));
+      return Promise.all(ids.map((id) => this.fetchPool(id)));
+    }
 
     const iface = this.contract.interface;
     const vaultAddress = await this.contract.getAddress();
@@ -112,9 +147,6 @@ export class VaultClient {
       callData: iface.encodeFunctionData("pools", [BigInt(i)]),
     }));
 
-    const provider =
-      (this.contract.runner as Signer | null)?.provider ??
-      (this.contract.runner as ethers.Provider | null);
     const mc = new Contract(MULTICALL3_ADDRESS, MULTICALL3_ABI, provider);
     const results: { success: boolean; returnData: string }[] =
       await mc.aggregate3(calls);
