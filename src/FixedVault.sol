@@ -170,7 +170,7 @@ contract FixedVault is ReentrancyGuard {
     error InvalidMaturity();
     error InvalidDepositToken();
     error AprTooHigh();
-    error DecimalsTooHigh();
+    error InvalidDepositTokenDecimals();
     error InvalidDeadlineOffset();
     error DepositTooSmall();
     error PoolCapExceeded();
@@ -562,17 +562,14 @@ contract FixedVault is ReentrancyGuard {
         return uint64(total);
     }
 
-    /// @dev Read decimals() from an ERC-20 token. Falls back to 18 if call fails.
-    ///      On success, decodes as uint256 and rejects values above 18 before narrowing to uint8
-    ///      (avoids truncation bypass e.g. 256 → 0).
+    /// @dev Read decimals() from the deposit token. Only 6 decimals are supported (uint64 accounting).
+    ///      Decodes as uint256 so malicious tokens cannot bypass checks via uint8 overflow (e.g. 256 → 0).
     function _tokenDecimals(address token) internal view returns (uint8) {
         (bool ok, bytes memory data) = token.staticcall(abi.encodeWithSignature("decimals()"));
-        if (ok && data.length >= 32) {
-            uint256 dec = abi.decode(data, (uint256));
-            if (dec > 18) revert DecimalsTooHigh();
-            return uint8(dec);
-        }
-        return 18;
+        if (!ok || data.length < 32) revert InvalidDepositTokenDecimals();
+        uint256 dec = abi.decode(data, (uint256));
+        if (dec != 6) revert InvalidDepositTokenDecimals();
+        return 6;
     }
 
     /// @dev uint64 → ASCII string (for token name/symbol generation).
