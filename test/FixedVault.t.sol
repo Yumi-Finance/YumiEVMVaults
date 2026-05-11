@@ -7,12 +7,15 @@ import {YieldToken} from "../src/YieldToken.sol";
 import {MockERC20} from "./MockERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-/// @dev decimals() as uint256 returning 256 — uint8 cast would truncate to 0 without full-range checks.
+/// @dev decimals() as uint256 returning 256 — must not be accepted as 6.
 contract TruncatingDecimalsMock {
     function decimals() external pure returns (uint256) {
         return 256;
     }
 }
+
+/// @dev ERC-20–like contract without decimals() (initPool must revert).
+contract NoDecimalsMock {}
 
 contract FixedVaultTest is Test {
     FixedVault vault;
@@ -252,7 +255,7 @@ contract FixedVaultTest is Test {
     function test_initPool_rejectsHighDecimals() public {
         MockERC20 highDec = new MockERC20("HD", "HD", 19);
         vm.prank(authority);
-        vm.expectRevert(FixedVault.DecimalsTooHigh.selector);
+        vm.expectRevert(FixedVault.InvalidDepositTokenDecimals.selector);
         vault.initPool(
             FixedVault.InitPoolParams({
                 depositToken: address(highDec),
@@ -266,13 +269,47 @@ contract FixedVaultTest is Test {
         );
     }
 
+    function test_initPool_rejectsEighteenDecimals() public {
+        MockERC20 wethLike = new MockERC20("WETH", "WETH", 18);
+        vm.prank(authority);
+        vm.expectRevert(FixedVault.InvalidDepositTokenDecimals.selector);
+        vault.initPool(
+            FixedVault.InitPoolParams({
+                depositToken: address(wethLike),
+                aprBps: APR_BPS,
+                maturityTs: maturityTs,
+                depositDeadlineOffset: 0,
+                minDepositAmount: MIN_DEPOSIT,
+                maxTotalDeposit: MAX_TOTAL_DEPOSIT,
+                whitelistEnabled: false
+            })
+        );
+    }
+
     function test_initPool_rejectsDecimalsTruncationBypass() public {
         TruncatingDecimalsMock bad = new TruncatingDecimalsMock();
         vm.prank(authority);
-        vm.expectRevert(FixedVault.DecimalsTooHigh.selector);
+        vm.expectRevert(FixedVault.InvalidDepositTokenDecimals.selector);
         vault.initPool(
             FixedVault.InitPoolParams({
                 depositToken: address(bad),
+                aprBps: APR_BPS,
+                maturityTs: maturityTs,
+                depositDeadlineOffset: 0,
+                minDepositAmount: MIN_DEPOSIT,
+                maxTotalDeposit: MAX_TOTAL_DEPOSIT,
+                whitelistEnabled: false
+            })
+        );
+    }
+
+    function test_initPool_rejectsTokenWithoutDecimals() public {
+        NoDecimalsMock bare = new NoDecimalsMock();
+        vm.prank(authority);
+        vm.expectRevert(FixedVault.InvalidDepositTokenDecimals.selector);
+        vault.initPool(
+            FixedVault.InitPoolParams({
+                depositToken: address(bare),
                 aprBps: APR_BPS,
                 maturityTs: maturityTs,
                 depositDeadlineOffset: 0,
