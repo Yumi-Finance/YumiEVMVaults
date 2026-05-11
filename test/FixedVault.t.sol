@@ -7,6 +7,13 @@ import {YieldToken} from "../src/YieldToken.sol";
 import {MockERC20} from "./MockERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+/// @dev decimals() as uint256 returning 256 — uint8 cast would truncate to 0 without full-range checks.
+contract TruncatingDecimalsMock {
+    function decimals() external pure returns (uint256) {
+        return 256;
+    }
+}
+
 contract FixedVaultTest is Test {
     FixedVault vault;
     MockERC20 usdc;
@@ -195,6 +202,23 @@ contract FixedVaultTest is Test {
         vault.initPool(
             FixedVault.InitPoolParams({
                 depositToken: address(highDec),
+                aprBps: APR_BPS,
+                maturityTs: maturityTs,
+                depositDeadlineOffset: 0,
+                minDepositAmount: MIN_DEPOSIT,
+                maxTotalDeposit: MAX_TOTAL_DEPOSIT,
+                whitelistEnabled: false
+            })
+        );
+    }
+
+    function test_initPool_rejectsDecimalsTruncationBypass() public {
+        TruncatingDecimalsMock bad = new TruncatingDecimalsMock();
+        vm.prank(authority);
+        vm.expectRevert(FixedVault.DecimalsTooHigh.selector);
+        vault.initPool(
+            FixedVault.InitPoolParams({
+                depositToken: address(bad),
                 aprBps: APR_BPS,
                 maturityTs: maturityTs,
                 depositDeadlineOffset: 0,
@@ -1223,6 +1247,112 @@ contract FixedVaultTest is Test {
         emit FixedVault.WithdrawEvent(POOL_ID, user1, 0, 0, 0, 0);
         vm.prank(user1);
         vault.withdraw(POOL_ID, yBal);
+    }
+
+    function test_event_poolInitialized() public {
+        uint64 expectedPoolId = vault.nextPoolId();
+        uint64 vaultNonce = vm.getNonce(address(vault));
+        address yieldPred = vm.computeCreateAddress(address(vault), vaultNonce);
+
+        vm.expectEmit(true, false, false, true);
+        emit FixedVault.PoolInitialized(
+            expectedPoolId,
+            address(usdc),
+            yieldPred,
+            APR_BPS,
+            maturityTs,
+            uint64(0),
+            MIN_DEPOSIT,
+            MAX_TOTAL_DEPOSIT,
+            false
+        );
+
+        vm.prank(authority);
+        vault.initPool(
+            FixedVault.InitPoolParams({
+                depositToken: address(usdc),
+                aprBps: APR_BPS,
+                maturityTs: maturityTs,
+                depositDeadlineOffset: 0,
+                minDepositAmount: MIN_DEPOSIT,
+                maxTotalDeposit: MAX_TOTAL_DEPOSIT,
+                whitelistEnabled: false
+            })
+        );
+    }
+
+    function test_event_poolUpdated() public {
+        _initDefaultPool();
+        _deposit(user1, POOL_ID, DEPOSIT_AMOUNT);
+
+        uint64 newMax = 10_000_000_000;
+        vm.startPrank(authority);
+        vm.expectEmit(true, true, false, true);
+        emit FixedVault.PoolUpdated(
+            POOL_ID, authority, newMax, MIN_DEPOSIT, uint16(1200), false, block.timestamp
+        );
+        vault.updatePool(
+            POOL_ID,
+            FixedVault.UpdatePoolParams({
+                updateMaxTotalDeposit: true,
+                maxTotalDeposit: newMax,
+                updateMinDepositAmount: false,
+                minDepositAmount: 0,
+                updateAprBps: true,
+                aprBps: 1200,
+                updateAllowOverpay: false,
+                allowOverpay: false
+            })
+        );
+        vm.stopPrank();
+    }
+
+    function test_event_depositPermitGranted() public {
+        uint64 wlPoolId = _initPool(APR_BPS, maturityTs, 0, MIN_DEPOSIT, MAX_TOTAL_DEPOSIT, true);
+        int64 expiresAt = int64(int256(block.timestamp + 3600));
+        uint64 maxAmt = 500_000_000;
+
+        vm.prank(authority);
+        vm.expectEmit(true, true, false, true);
+        emit FixedVault.DepositPermitGranted(wlPoolId, user1, maxAmt, expiresAt);
+        vault.grantPermit(wlPoolId, user1, maxAmt, expiresAt);
+    }
+
+    function test_event_depositPermitRevoked() public {
+        uint64 wlPoolId = _initPool(APR_BPS, maturityTs, 0, MIN_DEPOSIT, MAX_TOTAL_DEPOSIT, true);
+
+        vm.prank(authority);
+        vault.grantPermit(wlPoolId, user1, 0, 0);
+
+        vm.prank(authority);
+        vm.expectEmit(true, true, false, true);
+        emit FixedVault.DepositPermitRevoked(wlPoolId, user1);
+        vault.revokePermit(wlPoolId, user1);
+    }
+
+    function test_event_sweepRepayVault() public {
+        int64 shortMat = int64(int256(block.timestamp + 3 days));
+        uint64 swPoolId = _initPool(APR_BPS, shortMat, 0, MIN_DEPOSIT, MAX_TOTAL_DEPOSIT, false);
+        _deposit(user1, swPoolId, DEPOSIT_AMOUNT);
+
+        YieldToken yt = _getYieldToken(swPoolId);
+        uint64 yBal = uint64(yt.balanceOf(user1));
+
+        vm.startPrank(authority);
+        usdc.approve(address(vault), yBal);
+        vault.repay(swPoolId, yBal);
+        vm.stopPrank();
+
+        vm.warp(uint256(int256(shortMat)));
+        vm.prank(authority);
+        vault.enableWithdrawals(swPoolId);
+
+        vm.warp(uint256(int256(shortMat)) + vault.SWEEP_GRACE_SECONDS());
+
+        vm.prank(authority);
+        vm.expectEmit(true, true, false, true);
+        emit FixedVault.SweepRepayVaultEvent(swPoolId, authority, yBal, yBal, block.timestamp);
+        vault.sweepRepayVault(swPoolId);
     }
 
     // ========================================================================

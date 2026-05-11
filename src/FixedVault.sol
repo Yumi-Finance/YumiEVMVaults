@@ -242,7 +242,6 @@ contract FixedVault is ReentrancyGuard {
         if (params.aprBps > MAX_APR_BPS) revert AprTooHigh();
 
         uint8 decs = _tokenDecimals(params.depositToken);
-        if (decs > 18) revert DecimalsTooHigh();
 
         uint64 durationSecs = uint64(int64(params.maturityTs) - now_);
 
@@ -558,10 +557,13 @@ contract FixedVault is ReentrancyGuard {
     }
 
     /// @dev Read decimals() from an ERC-20 token. Falls back to 18 if call fails.
+    ///      On success, decodes as uint256 and rejects values above 18 before narrowing to uint8
+    ///      (avoids truncation bypass e.g. 256 → 0).
     function _tokenDecimals(address token) internal view returns (uint8) {
         (bool ok, bytes memory data) = token.staticcall(abi.encodeWithSignature("decimals()"));
         if (ok && data.length >= 32) {
             uint256 dec = abi.decode(data, (uint256));
+            if (dec > 18) revert DecimalsTooHigh();
             return uint8(dec);
         }
         return 18;
