@@ -84,12 +84,13 @@ export class VaultClient {
       withdrawalsEnabled: r.withdrawalsEnabled,
       whitelistEnabled: r.whitelistEnabled,
       allowOverpay: r.allowOverpay,
+      initialized: r.initialized,
     };
   }
 
   async poolExists(poolId: bigint): Promise<boolean> {
     const pool = await this.contract.pools(poolId);
-    return pool.depositToken !== "0x0000000000000000000000000000000000000000";
+    return Boolean(pool.initialized);
   }
 
   /** Fetch all pool IDs from the on-chain nextPoolId counter. */
@@ -138,6 +139,7 @@ export class VaultClient {
         withdrawalsEnabled: d.withdrawalsEnabled,
         whitelistEnabled: d.whitelistEnabled,
         allowOverpay: d.allowOverpay,
+        initialized: d.initialized,
       };
     });
   }

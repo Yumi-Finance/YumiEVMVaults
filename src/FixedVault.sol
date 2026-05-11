@@ -56,6 +56,8 @@ contract FixedVault is ReentrancyGuard {
         bool withdrawalsEnabled;
         bool whitelistEnabled;
         bool allowOverpay;
+        /// @notice Set true only after a successful `initPool`; used for existence checks (not `depositToken == address(0)`).
+        bool initialized;
     }
 
     /// @notice poolId → Pool
@@ -166,6 +168,7 @@ contract FixedVault is ReentrancyGuard {
     error NoPendingAuthority();
     error PoolDoesNotExist();
     error InvalidMaturity();
+    error InvalidDepositToken();
     error AprTooHigh();
     error DecimalsTooHigh();
     error InvalidDeadlineOffset();
@@ -198,7 +201,7 @@ contract FixedVault is ReentrancyGuard {
     }
 
     modifier poolMustExist(uint64 poolId) {
-        if (pools[poolId].depositToken == address(0)) revert PoolDoesNotExist();
+        if (!pools[poolId].initialized) revert PoolDoesNotExist();
         _;
     }
 
@@ -235,6 +238,8 @@ contract FixedVault is ReentrancyGuard {
     }
 
     function initPool(InitPoolParams calldata params) external onlyAuthority returns (uint64 poolId) {
+        if (params.depositToken == address(0)) revert InvalidDepositToken();
+
         poolId = nextPoolId++;
 
         int64 now_ = int64(int256(block.timestamp));
@@ -266,6 +271,7 @@ contract FixedVault is ReentrancyGuard {
         pool.minDepositAmount = params.minDepositAmount;
         pool.maxTotalDeposit = params.maxTotalDeposit;
         pool.whitelistEnabled = params.whitelistEnabled;
+        pool.initialized = true;
 
         emit PoolInitialized(
             poolId,

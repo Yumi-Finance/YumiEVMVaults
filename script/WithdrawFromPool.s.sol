@@ -27,8 +27,9 @@ contract WithdrawFromPool is Script {
         uint64 amount = uint64(amount256);
 
         FixedVault vault = FixedVault(vaultAddr);
-        (, address depositToken, address yieldToken,,,,,,,,,,,,,,) = vault.pools(poolId);
-        require(depositToken != address(0), "pool does not exist");
+        (, address depositToken, address yieldToken,,,,,,,,,,,,,,,bool poolInitialized) =
+            vault.pools(poolId);
+        require(poolInitialized, "pool does not exist");
 
         uint256 ytBal = YieldToken(yieldToken).balanceOf(user);
         console.log("User:", user);

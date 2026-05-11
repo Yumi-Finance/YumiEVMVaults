@@ -82,7 +82,8 @@ contract CreatePool is Script {
             uint64 _totalSwept,
             bool _withdrawalsEnabled,
             bool _whitelistEnabled,
-            bool _allowOverpay
+            bool _allowOverpay,
+            bool _initialized
         ) = FixedVault(vaultAddr).pools(poolId);
         console.log("Yield token:", yieldToken);
     }

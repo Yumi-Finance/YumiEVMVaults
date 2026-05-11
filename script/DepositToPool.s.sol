@@ -44,9 +44,10 @@ contract DepositToPool is Script {
             uint64 _totalSwept,
             bool _withdrawalsEnabled,
             bool _whitelistEnabled,
-            bool _allowOverpay
+            bool _allowOverpay,
+            bool poolInitialized
         ) = vault.pools(poolId);
-        require(depositToken != address(0), "pool does not exist");
+        require(poolInitialized, "pool does not exist");
 
         console.log("Depositor:", user);
         console.log("Pool:", poolId);
