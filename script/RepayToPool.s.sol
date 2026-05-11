@@ -28,8 +28,8 @@ contract RepayToPool is Script {
         uint64 amount = uint64(amount256);
 
         FixedVault vault = FixedVault(vaultAddr);
-        (, address depositToken, ,,,,,,,,,,,,,,) = vault.pools(poolId);
-        require(depositToken != address(0), "pool does not exist");
+        (, address depositToken, ,,,,,,,,,,,,,,,bool poolInitialized) = vault.pools(poolId);
+        require(poolInitialized, "pool does not exist");
 
         console.log("Authority:", authority);
         console.log("Vault:", vaultAddr);
