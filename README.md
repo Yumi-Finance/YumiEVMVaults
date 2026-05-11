@@ -91,6 +91,49 @@ All scripts use environment variables from `.env` (see `.env.example`) and are r
 - **Deploy**: `script/Deploy.s.sol`  
   Deploys `FixedVault`, setting `authority` to the deployer.
 
+#### Deploy (`Deploy.s.sol`)
+
+1. Copy and fill `.env` from `.env.example`. For deployment you need at least **`PRIVATE_KEY`** (the deployer becomes the vault **authority**).
+2. Run the script with an RPC URL. This repo defines named endpoints in `foundry.toml` (e.g. **`fluent_mainnet`** → `https://rpc.fluent.xyz`, chain id **25363**).
+
+```bash
+source .env
+
+# Using a named RPC from foundry.toml (recommended)
+forge script script/Deploy.s.sol:Deploy --rpc-url fluent_mainnet --broadcast
+
+# Or any HTTP(S) RPC, e.g. from your provider
+forge script script/Deploy.s.sol:Deploy --rpc-url "$RPC_URL" --broadcast
+```
+
+3. Set **`VAULT=`** in `.env` to the printed `FixedVault` address before running pool scripts. Optionally record the address in `sdk/src/deployments.ts` for the app/SDK default on that chain.
+
+> **Foundry:** if `forge script --broadcast` fails with `Chain … not supported` on a custom chain id, upgrade Forge with `foundryup` (older stable releases may reject unknown chains).
+
+#### Verify on FluentScan (`forge verify-contract`)
+
+After deploy, verify `FixedVault` on [FluentScan](https://fluentscan.xyz) (Blockscout API). The constructor is `constructor(address authority_)` — use the **authority address from deployment** (the deployer EOA unless you changed it before verify). You can confirm the value on-chain:
+
+```bash
+cast call "$VAULT" "authority()(address)" --rpc-url https://rpc.fluent.xyz
+```
+
+`forge verify-contract` does not accept `--chain fluent_mainnet` in current Forge builds; pass **chain id `25363`** and the Blockscout verifier URL explicitly:
+
+```bash
+# Replace DEPLOYED_VAULT and AUTHORITY with your addresses (checksummed or lowercase is fine).
+forge verify-contract \
+  "$DEPLOYED_VAULT" \
+  src/FixedVault.sol:FixedVault \
+  --chain 25363 \
+  --verifier blockscout \
+  --verifier-url https://fluentscan.xyz/api/ \
+  --constructor-args $(cast abi-encode "constructor(address)" "$AUTHORITY") \
+  --watch
+```
+
+Verification must use the **original** constructor `authority_` from the deployment transaction, not a later value if you transferred authority via `proposeAuthority` / `acceptAuthority`.
+
 - **Create pool** (authority): `script/CreatePool.s.sol`
 - **Deposit** (user): `script/DepositToPool.s.sol`
 - **Repay** (authority): `script/RepayToPool.s.sol`
@@ -98,17 +141,7 @@ All scripts use environment variables from `.env` (see `.env.example`) and are r
 - **Update pool params** (authority): `script/UpdatePool.s.sol`
 - **Change authority**: `script/ProposeAuthority.s.sol` → `script/AcceptAuthority.s.sol`
 
-Example run (generic template):
-
-```bash
-cp .env.example .env
-# fill out .env
-source .env
-
-forge script script/Deploy.s.sol:Deploy --rpc-url "$RPC_URL" --broadcast
-```
-
-> Note: you provide the RPC endpoint via `RPC_URL` (it’s not included in `.env.example`). Other variables are documented in `.env.example` and in the docblocks of `script/*.s.sol`.
+Other scripts use the same pattern (`source .env` then `forge script … --rpc-url … --broadcast`). Variables are documented in `.env.example` and in the docblocks of `script/*.s.sol`.
 
 ### Security & constraints (read this)
 
